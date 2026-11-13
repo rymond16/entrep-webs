@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            background-image: url('municipal.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen relative">
+
+    <div class="bg-white/30 backdrop-blur-md border border-white/40 p-8 rounded-xl shadow-lg w-96 text-gray-800">
+        <h2 class="text-2xl font-bold mb-6">Admin Login</h2>
+        <input type="email" id="email" placeholder="Email" class="w-full bg-white/50 border border-white/20 p-2 mb-4 rounded focus:ring-2 focus:ring-blue-400 outline-none">
+        <input type="password" id="password" placeholder="Password" class="w-full bg-white/50 border border-white/20 p-2 mb-4 rounded focus:ring-2 focus:ring-blue-400 outline-none">
+        <button onclick="signIn()" class="w-full bg-blue-600/80 hover:bg-blue-600 text-white py-2 rounded font-bold transition">Sign In</button>
+        <p id="error-msg" class="text-red-700 font-semibold text-sm mt-4"></p>
+    </div>
+
+    <div class="fixed bottom-4 right-4 text-white font-medium drop-shadow-md">
+        Created by: NEMSU STUDENT BSCS
+    </div>
+
+    <script>
+        const client = supabase.createClient('https://qbwmnwdbpwwvsvtqncpc.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFid21ud2RicHd3dnN2dHFuY3BjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1MzU2MjcsImV4cCI6MjA5NTExMTYyN30.FtpWQ0XucugoUQb8dMLMoTkJ5oNiszpMLI7y1UuoMD4');
+
+        async function signIn() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            // 1. Attempt Sign In
+            const { data, error } = await client.auth.signInWithPassword({ email, password });
+            
+            if (error) { 
+                document.getElementById('error-msg').innerText = error.message; 
+                return;
+            }
+
+            // 2. Fetch the profile to check the role
+            const { data: profile } = await client.from('profiles')
+                .select('role')
+                .eq('id', data.user.id)
+                .single();
+
+            // 3. Block logic: If role is 'user', sign them out immediately
+            if (profile?.role === 'user') {
+                await client.auth.signOut();
+                document.getElementById('error-msg').innerText = "Access denied: Your account does not have permission to access the dashboard.";
+                return;
+            }
+
+            // 4. If role is 'admin' or 'staff', proceed
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>

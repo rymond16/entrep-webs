@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="pageTitle">Lianga Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        body { background-image: url('municipal.jpg'); background-size: cover; background-position: center; background-repeat: no-repeat; background-attachment: fixed; }
+        .glass { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(15px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .pill { padding: 4px 12px; border-radius: 9999px; font-size: 11px; font-weight: 700; white-space: nowrap; border: 1px solid rgba(255,255,255,0.1); }
+        .pill-hr { background: rgba(6, 182, 212, 0.2); color: #22d3ee; border-color: rgba(6, 182, 212, 0.4); }
+        .pill-accounting { background: rgba(168, 85, 247, 0.2); color: #c084fc; border-color: rgba(168, 85, 247, 0.4); }
+        .pill-civil { background: rgba(34, 197, 94, 0.2); color: #4ade80; border-color: rgba(34, 197, 94, 0.4); }
+        .pill-date { background: rgba(255, 255, 255, 0.1); color: #e5e7eb; border-color: rgba(255, 255, 255, 0.2); }
+        .cat-leave { background: rgba(234, 179, 8, 0.2); color: #facc15; border-color: rgba(234, 179, 8, 0.4); }
+        .cat-payroll { background: rgba(244, 63, 94, 0.2); color: #fb7185; border-color: rgba(244, 63, 94, 0.4); }
+        .cat-purchase { background: rgba(249, 115, 22, 0.2); color: #fb923c; border-color: rgba(249, 115, 22, 0.4); }
+        .cat-performance { background: rgba(59, 130, 246, 0.2); color: #60a5fa; border-color: rgba(59, 130, 246, 0.4); }
+        .cat-other { background: rgba(156, 163, 175, 0.2); color: #d1d5db; border-color: rgba(156, 163, 175, 0.4); }
+        .pill-action { background: rgba(25, 247, 0, 0.15); color: #00e946; border: 1px solid rgba(0, 233, 70, 0.3); }
+        .pill-action:hover { background: rgba(0, 233, 70, 0.3); }
+        .sortable-header { cursor: pointer; transition: background 0.2s; }
+        .sortable-header:hover { background: rgba(255, 255, 255, 0.1); }
+    </style>
+</head>
+<body class="p-8 text-gray-200">
+
+    <div id="imageModal" class="hidden fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-50" onclick="closeModal('imageModal')"><img id="modalImage" src="" class="max-w-full max-h-[90vh] rounded-xl border border-cyan-500 shadow-[0_0_20px_rgba(6,182,212,0.5)]" onclick="event.stopPropagation()"></div>
+    
+    <div id="textModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="glass p-8 rounded-2xl w-full max-w-5xl h-[85vh] flex flex-col border-cyan-500/50">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold text-cyan-400">Edit Document Details</h2>
+                <button onclick="confirmDelete(document.getElementById('editDocId').value); closeModal('textModal')" class="bg-red-500/20 text-red-400 border border-red-500 px-4 py-1.5 rounded font-bold hover:bg-red-500 hover:text-white transition text-xs">DELETE</button>
+            </div>
+            <input type="hidden" id="editDocId">
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="text-xs text-gray-400 uppercase font-bold">Document Name</label>
+                    <input type="text" id="modalDocName" class="w-full p-2 border border-gray-700 rounded bg-black/50 text-white focus:ring-2 focus:ring-cyan-500 outline-none">
+                </div>
+                <div>
+                    <label class="text-xs text-gray-400 uppercase font-bold">Category</label>
+                    <select id="modalCategory" class="w-full p-2 border border-gray-700 rounded bg-black/50 text-white focus:ring-2 focus:ring-cyan-500 outline-none"></select>
+                </div>
+            </div>
+            <textarea id="modalTextArea" class="w-full flex-grow p-4 border border-gray-700 rounded-lg bg-black/50 text-white focus:ring-2 focus:ring-cyan-500 outline-none"></textarea>
+            <div class="flex gap-4 mt-6">
+                <button onclick="saveChanges()" class="flex-1 bg-cyan-600 text-white py-2 rounded-lg font-bold hover:bg-cyan-500 shadow-[0_0_15px_rgba(8,145,178,0.4)] transition">Save Changes</button>
+                <button onclick="closeModal('textModal')" class="flex-1 bg-gray-700 text-white py-2 rounded-lg font-bold hover:bg-gray-600 transition">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="deleteModal" class="hidden fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 z-50"><div class="glass p-6 rounded-2xl w-full max-w-sm border-red-500/50"><h2 class="text-lg font-bold mb-4 text-red-400">Confirm Deletion</h2><p class="mb-6 text-gray-300">Are you sure you want to delete this document?</p><input type="hidden" id="deleteDocId"><div class="flex gap-4"><button onclick="executeDelete()" class="flex-1 bg-red-600 text-white py-2 rounded-lg font-bold hover:bg-red-700">Delete</button><button onclick="closeModal('deleteModal')" class="flex-1 bg-gray-700 text-white py-2 rounded-lg font-bold hover:bg-gray-600">Back</button></div></div></div>
+
+    <div class="max-w-6xl mx-auto glass p-8 rounded-3xl shadow-2xl border-white/10">
+        <div class="flex justify-between items-center mb-8">
+            <h1 id="mainHeading" class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500">Document Records</h1>
+            <div class="flex gap-2 flex-wrap">
+                <input type="text" id="searchInput" placeholder="Search..." class="bg-black/30 border border-cyan-500/30 p-2 rounded-lg w-28 text-white text-xs" onkeyup="renderTable()">
+                <input type="date" id="dateFilter" class="bg-black/30 border border-cyan-500/30 p-2 rounded-lg text-white text-xs" onchange="renderTable()">
+                <select id="catFilter" class="bg-black/30 border border-cyan-500/30 p-2 rounded-lg text-white text-xs" onchange="renderTable()"><option value="">All Categories</option></select>
+                <button onclick="signOut()" class="bg-gradient-to-r from-red-600 to-pink-600 text-white px-4 py-2 rounded-lg font-bold hover:opacity-90 transition text-xs">Logout</button>
+            </div>
+        </div>
+
+        <div class="shadow-2xl rounded-2xl overflow-hidden border border-white/10 bg-black/20">
+            <table class="min-w-full">
+                <thead class="bg-black/40 border-b border-white/10">
+                    <tr>
+                        <th class="p-4 text-left text-xs font-bold uppercase text-cyan-300 sortable-header" onclick="setSort('document_name')">Name ↕</th>
+                        <th class="p-4 text-left text-xs font-bold uppercase text-cyan-300 sortable-header" onclick="setSort('category')">Category ↕</th>
+                        <th class="p-4 text-left text-xs font-bold uppercase text-cyan-300 sortable-header" onclick="setSort('created_at')">Date ↕</th>
+                        <th class="p-4 text-left text-xs font-bold uppercase text-cyan-300 sortable-header" onclick="setSort('office_assignment')">Office ↕</th>
+                        <th class="p-4 text-left text-xs font-bold uppercase text-cyan-300">Actions</th>
+                        <th class="p-4 text-left text-xs font-bold uppercase text-cyan-300">Downloads</th>
+                        <th class="p-4 text-center text-xs font-bold uppercase text-cyan-300 sortable-header" onclick="setSort('status')">Status ↕</th>
+                    </tr>
+                </thead>
+                <tbody id="table-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://qbwmnwdbpwwvsvtqncpc.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFid21ud2RicHd3dnN2dHFuY3BjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1MzU2MjcsImV4cCI6MjA5NTExMTYyN30.FtpWQ0XucugoUQb8dMLMoTkJ5oNiszpMLI7y1UuoMD4'; 
+        const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        let allDocs = [];
+        let currentSort = { column: null, direction: 'asc' };
+        
+        let userRole = 'staff'; 
+        let userOffice = ''; 
+        
+        const officeConfig = { 
+            'hr': { name: 'Human Resources', class: 'pill-hr', categories: ['Contracts', 'Leave Forms', 'Payroll', 'Performance Reviews', 'Others'] }, 
+            'accounting': { name: 'Accounting', class: 'pill-accounting', categories: ['Reports', 'Purchase Orders', 'Vouchers', 'Budget', 'Others'] }, 
+            'civil_registry': { name: 'Civil Registry', class: 'pill-civil', categories: ['Birth Certificates', 'Marriage Certificates', 'Death Certificates', 'Others'] } 
+        };
+        const categoryColors = { 'leave forms': 'cat-leave', 'payroll': 'cat-payroll', 'purchase orders': 'cat-purchase', 'performance reviews': 'cat-performance', 'birth certificates': 'cat-other', 'marriage certificates': 'cat-other', 'death certificates': 'cat-other', 'contracts': 'cat-other', 'reports': 'cat-other', 'vouchers': 'cat-other', 'budget': 'cat-other', 'others': 'cat-other' };
+
+        async function initDashboard() {
+            const { data: { user } } = await client.auth.getUser();
+            if (!user) { window.location.href = 'login.html'; return; }
+
+            const { data: profile } = await client
+                .from('profiles')
+                .select('role, office_assignment')
+                .eq('id', user.id)
+                .single();
+
+            if (profile) {
+                userRole = profile.role;
+                // Mapping the database full names to your system keys
+                const mapping = { 'Human Resources': 'hr', 'Accounting': 'accounting', 'Civil Registry': 'civil_registry' };
+                userOffice = mapping[profile.office_assignment] || '';
+            }
+            loadData();
+        }
+
+        async function loadData() {
+            const { data, error } = await client.from('documents').select('*');
+            if (error) { console.error("Error:", error); return; }
+
+            if (userRole === 'admin') {
+                allDocs = data || [];
+            } else {
+                allDocs = (data || []).filter(d => d.office_assignment === userOffice);
+            }
+            
+            populateCategoryFilters();
+            renderTable();
+        }
+
+        function populateCategoryFilters() {
+            const catFilter = document.getElementById('catFilter');
+            catFilter.innerHTML = '<option value="">All Categories</option>';
+            
+            let categories = [];
+            if (userRole === 'admin') {
+                Object.values(officeConfig).forEach(cfg => categories.push(...cfg.categories));
+            } else {
+                categories = officeConfig[userOffice]?.categories || [];
+            }
+            
+            [...new Set(categories)].sort().forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat;
+                opt.text = cat;
+                catFilter.appendChild(opt);
+            });
+        }
+
+        function setSort(column) {
+            if (currentSort.column === column) {
+                currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSort.column = column;
+                currentSort.direction = 'asc';
+            }
+            renderTable();
+        }
+
+        function renderTable() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const dateVal = document.getElementById('dateFilter').value;
+            const catVal = document.getElementById('catFilter').value;
+
+            let filtered = allDocs.filter(d => 
+                (d.document_name || '').toLowerCase().includes(searchTerm) && 
+                (catVal === "" || (d.category || '').toLowerCase() === catVal.toLowerCase()) &&
+                (dateVal === "" || (d.created_at || '').startsWith(dateVal))
+            );
+
+            if (currentSort.column) {
+                filtered.sort((a, b) => {
+                    let valA = a[currentSort.column] || '';
+                    let valB = b[currentSort.column] || '';
+                    if (valA < valB) return currentSort.direction === 'asc' ? -1 : 1;
+                    if (valA > valB) return currentSort.direction === 'asc' ? 1 : -1;
+                    return 0;
+                });
+            }
+
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = filtered.map(doc => {
+                const offCfg = officeConfig[doc.office_assignment] || { name: doc.office_assignment, class: 'pill-hr' };
+                const catClass = categoryColors[(doc.category || '').toLowerCase()] || 'cat-other';
+                return `
+                <tr class="border-t border-white/10 hover:bg-white/5">
+                    <td class="p-4"><span class="pill ${offCfg.class}">${doc.document_name}</span></td>
+                    <td class="p-4"><span class="pill ${catClass}">${doc.category || 'N/A'}</span></td>
+                    <td class="p-4"><span class="pill pill-date">${doc.created_at ? doc.created_at.split('T')[0] : 'N/A'}</span></td>
+                    <td class="p-4"><span class="pill ${offCfg.class}">${offCfg.name}</span></td>
+                    <td class="p-4">
+                        <button onclick="openEditModal('${doc.id}')" class="pill pill-action w-full mb-1">Edit</button>
+                        ${doc.image_url ? `<button onclick="showImage('${doc.image_url}')" class="pill pill-action w-full">Image</button>` : ''}
+                    </td>
+                    <td class="p-4">
+                        <div class="grid grid-cols-2 gap-1 w-28 text-[9px]">
+                            <button onclick="handleDownload('txt', '${doc.id}')" class="bg-gray-800 py-1 rounded">TXT</button>
+                            <button onclick="handleDownload('pdf', '${doc.id}')" class="bg-red-900/50 py-1 rounded">PDF</button>
+                            <button onclick="handleDownload('doc', '${doc.id}')" class="bg-blue-900/50 py-1 rounded">DOC</button>
+                            ${doc.image_url ? `<button onclick="downloadImage('${doc.image_url}', '${doc.document_name}')" class="bg-yellow-900/50 py-1 rounded">IMG</button>` : ''}
+                        </div>
+                    </td>
+                    <td class="p-4 text-center">${doc.status === 'approved' ? '<span class="text-green-500 font-bold text-lg">✓</span>' : '<span class="text-red-500 font-bold text-lg">✕</span>'}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        function openEditModal(id) {
+            const doc = allDocs.find(d => d.id === id);
+            if (!doc) return;
+            document.getElementById('editDocId').value = doc.id;
+            document.getElementById('modalDocName').value = doc.document_name;
+            document.getElementById('modalTextArea').value = doc.extracted_text || '';
+            const catSelect = document.getElementById('modalCategory');
+            catSelect.innerHTML = '';
+            
+            (officeConfig[doc.office_assignment]?.categories || []).forEach(c => {
+                const opt = document.createElement('option'); opt.value = c; opt.text = c;
+                if (c === doc.category) opt.selected = true;
+                catSelect.appendChild(opt);
+            });
+            document.getElementById('textModal').classList.remove('hidden');
+        }
+
+        async function saveChanges() { 
+            await client.from('documents').update({ 
+                document_name: document.getElementById('modalDocName').value, 
+                category: document.getElementById('modalCategory').value, 
+                extracted_text: document.getElementById('modalTextArea').value 
+            }).eq('id', document.getElementById('editDocId').value); 
+            closeModal('textModal');
+            loadData();
+        }
+
+        function handleDownload(type, id) {
+            const doc = allDocs.find(d => d.id === id);
+            if (!doc) return;
+            const text = doc.extracted_text || '';
+            if (type === 'txt') {
+                const a = document.createElement('a'); a.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(text); a.download = doc.document_name + '.txt'; a.click();
+            } else if (type === 'pdf') {
+                const { jsPDF } = window.jspdf; const pdf = new jsPDF(); pdf.text(pdf.splitTextToSize(text, 180), 10, 10); pdf.save(doc.document_name + '.pdf');
+            } else if (type === 'doc') {
+                const s = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"></head><body>' + text.replace(/\n/g, '<br>') + '</body></html>';
+                const a = document.createElement('a'); a.href = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent(s); a.download = doc.document_name + '.doc'; a.click();
+            }
+        }
+
+        function showImage(url) { document.getElementById('imageModal').classList.remove('hidden'); document.getElementById('modalImage').src = url; }
+        function confirmDelete(id) { document.getElementById('deleteDocId').value = id; document.getElementById('deleteModal').classList.remove('hidden'); }
+        async function executeDelete() { await client.from('documents').delete().eq('id', document.getElementById('deleteDocId').value); closeModal('deleteModal'); closeModal('textModal'); loadData(); }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+        function signOut() { client.auth.signOut(); window.location.href = 'login.html'; }
+        async function downloadImage(url, name) { const res = await fetch(url); const blob = await res.blob(); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name + '.png'; a.click(); }
+        
+        initDashboard();
+    </script>
+</body>
+</html>
